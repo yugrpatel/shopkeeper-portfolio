@@ -24,37 +24,63 @@ Shopkeeper AI is a comprehensive enterprise solution that brings real-time, huma
 ### Architecture Diagram
 ```mermaid
 graph TD
-    subgraph Storefront["Shopify Storefront"]
-        VW["Voice Widget (Vanilla JS)"]
+    %% Client Layer
+    subgraph Clients["Client Applications"]
+        VW["Voice Widget (Vanilla JS / WebRTC)"]
+        CD["Customer Web Dashboard (React)"]
+        MA["Merchant Admin Panel (Remix/Polaris)"]
     end
 
-    subgraph AWS["AWS Infrastructure"]
-        PA["Pipecat Voice Agent (Python/WebRTC)"]
-        API["Backend API (Node.js/Remix)"]
-        REDIS[("Upstash Redis (Real-time State)")]
-        DB[("Primary Database")]
+    %% API & Gateway Layer
+    subgraph Gateway["API & Gateway Layer (Node.js)"]
+        REST["REST API Server"]
+        WS["WebSocket / SSE Server"]
+        RTC["WebRTC Signaling & Media Server"]
     end
 
-    subgraph AI["AI Providers"]
-        LLM["AWS Bedrock (Claude 3.5)"]
-        TTS["Text-to-Speech"]
-        STT["Speech-to-Text"]
-    end
-    
-    subgraph Dashboard["Merchant Dashboard"]
-        SA["Shopify Admin App (React/Polaris)"]
+    %% State & Message Broker
+    subgraph Cache["State Management & Telemetry"]
+        REDIS[("Redis Cache (Upstash)")]
     end
 
-    VW <-->|"WebRTC Audio"| PA
-    PA -->|"Audio"| STT
-    STT -->|"Text"| LLM
-    LLM -->|"Text"| TTS
-    TTS -->|"Audio"| PA
-    
-    PA -.->|"Live Telemetry"| REDIS
-    REDIS -.->|"WebSocket/SSE"| SA
-    SA -->|"Configure & Train"| API
-    API --> DB
+    %% Real-time Voice Pipeline (Pipecat)
+    subgraph Pipeline["Real-time Voice Pipeline (Python / ECS)"]
+        VAD["Voice Activity Detection (VAD)"]
+        STT["Speech-to-Text (Streaming)"]
+        AGENT["Dialogue Manager & State Machine"]
+        LLM["Large Language Model (Claude 3.5)"]
+        TTS["Text-to-Speech (Streaming)"]
+        RAG["Vector Search / RAG Engine"]
+    end
+
+    %% Data Layer
+    subgraph Database["Persistence Layer"]
+        PG[("Relational Database (PostgreSQL)")]
+        VDB[("Vector Database (pgvector)")]
+    end
+
+    %% Connections - Client to Gateway
+    VW <-->|"Audio RTP"| RTC
+    CD <-->|"Audio RTP"| RTC
+    MA <-->|"HTTPS / API"| REST
+    MA <-->|"Live Updates"| WS
+
+    %% Gateway to Pipeline
+    RTC <-->|"Audio Buffers"| VAD
+    VAD -->|"Speech Frames"| STT
+    STT -->|"Text Stream"| AGENT
+    AGENT <-->|"Context / Prompts"| LLM
+    AGENT <-->|"Query"| RAG
+    LLM -->|"Response Text"| TTS
+    TTS -->|"Audio Frames"| RTC
+
+    %% Telemetry & State
+    AGENT -.->|"Session State"| REDIS
+    REDIS -.->|"Pub/Sub"| WS
+
+    %% Data Persistence
+    REST <-->|"CRUD"| PG
+    RAG <-->|"Embeddings"| VDB
 ```
 
 ---
@@ -140,7 +166,7 @@ class VoicePipeline:
 
 ## 🔒 Source Code
 
-The complete source code is maintained in a private repository due to business confidentiality. I can provide access during the interview process upon request or walk through specific architectural decisions in a live screen-share.
+The complete source code is available for review upon request during the interview process, or I can walk through specific architectural decisions in a live screen-share.
 
 ---
 *Built with ❤️ for modern eCommerce.*
