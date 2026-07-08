@@ -11,7 +11,7 @@
 
 Embedding the voice agent requires adding a single script tag to any website. Once launched, it establishes a persistent WebRTC connection to the LiveKit backend, allowing users to talk directly to the AI to find products, get recommendations, and check order statuses.
 
-*(Screenshot placeholder: Please upload your screenshot to the `assets` folder as `widget-demo.png` and add the markdown `![Voice Widget Action](assets/widget-demo.png)` here!)*
+
 
 ---
 
@@ -128,7 +128,7 @@ graph TD
 
 ## Code Sample
 
-> *Note: The complete source code is available for review upon request during the interview process, or I can walk through specific architectural decisions in a live screen-share.*
+
 
 ```python
 # Abstracted representation of the Pipecat Pipeline (agent.py)
