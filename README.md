@@ -11,7 +11,9 @@
 
 Embedding the voice agent requires adding a single script tag to any website. Once launched, it establishes a persistent WebRTC connection to the LiveKit backend, allowing users to talk directly to the AI to find products, get recommendations, and check order statuses.
 
-
+<div align="center">
+  <img src="assets/widget-demo.png" alt="Voice Widget Action" width="800"/>
+</div>
 
 ---
 
