@@ -2,13 +2,16 @@
 
 > **A drop-in, highly scalable AI Voice Agent that integrates into any website or e-commerce platform via a lightweight widget. Built with WebRTC, Pipecat, LiveKit, and a Vector-driven RAG architecture to deliver sub-second conversational commerce.**
 
+🔗 **Live Website Integration:** [atlowest.com](https://atlowest.com)  
+🛍️ **Shopify App Store:** [Shopkeeper Voice Agent](https://apps.shopify.com/shopkeeper-2)
+
 ---
 
 ## 📸 The Plug-and-Play Widget
 
 Embedding the voice agent is as simple as adding a single script tag to any website. Once launched, it establishes a persistent WebRTC connection, allowing users to talk directly to the AI—just like a human support agent—to find products, get recommendations, and check order statuses.
 
-![Voice Widget Action](assets/widget-demo.png)
+*(Screenshot placeholder: Please upload your screenshot to the `assets` folder as `widget-demo.png` and add the markdown `![Voice Widget Action](assets/widget-demo.png)` here!)*
 
 ---
 
