@@ -24,36 +24,36 @@ Shopkeeper AI is a comprehensive enterprise solution that brings real-time, huma
 ### Architecture Diagram
 ```mermaid
 graph TD
-    subgraph "Shopify Storefront"
-        VW[Voice Widget (Vanilla JS)]
+    subgraph Storefront["Shopify Storefront"]
+        VW["Voice Widget (Vanilla JS)"]
     end
 
-    subgraph "AWS Infrastructure"
-        PA[Pipecat Voice Agent<br/>(Python/WebRTC)]
-        API[Backend API<br/>(Node.js/Remix)]
-        REDIS[(Upstash Redis<br/>Real-time State)]
-        DB[(Primary Database)]
+    subgraph AWS["AWS Infrastructure"]
+        PA["Pipecat Voice Agent (Python/WebRTC)"]
+        API["Backend API (Node.js/Remix)"]
+        REDIS[("Upstash Redis (Real-time State)")]
+        DB[("Primary Database")]
     end
 
-    subgraph "AI Providers"
-        LLM[AWS Bedrock<br/>(Claude 3.5)]
-        TTS[Text-to-Speech]
-        STT[Speech-to-Text]
+    subgraph AI["AI Providers"]
+        LLM["AWS Bedrock (Claude 3.5)"]
+        TTS["Text-to-Speech"]
+        STT["Speech-to-Text"]
     end
     
-    subgraph "Merchant Dashboard"
-        SA[Shopify Admin App<br/>(React/Polaris)]
+    subgraph Dashboard["Merchant Dashboard"]
+        SA["Shopify Admin App (React/Polaris)"]
     end
 
-    VW <-->|WebRTC Audio| PA
-    PA -->|Audio| STT
-    STT -->|Text| LLM
-    LLM -->|Text| TTS
-    TTS -->|Audio| PA
+    VW <-->|"WebRTC Audio"| PA
+    PA -->|"Audio"| STT
+    STT -->|"Text"| LLM
+    LLM -->|"Text"| TTS
+    TTS -->|"Audio"| PA
     
-    PA -.->|Live Telemetry| REDIS
-    REDIS -.->|WebSocket/SSE| SA
-    SA -->|Configure & Train| API
+    PA -.->|"Live Telemetry"| REDIS
+    REDIS -.->|"WebSocket/SSE"| SA
+    SA -->|"Configure & Train"| API
     API --> DB
 ```
 
