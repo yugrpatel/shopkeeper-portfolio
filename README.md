@@ -51,6 +51,20 @@ We built a custom, zero-AWS-cost telemetry emitter (`nn_telemetry.py`) inside th
 
 ---
 
+## 🧠 Core AI/ML Concepts & Skills Demonstrated
+
+This project is a comprehensive showcase of modern AI engineering, applying deep ML and Software Engineering principles to a production environment. 
+
+* **Python & Agent Frameworks**: The core real-time pipeline is built entirely in **Python**, utilizing the **Pipecat** framework to build a robust, state-machine driven **AI Agent** capable of function calling and complex dialogue management.
+* **Natural Language Processing (NLP) & Tokenization**: Implements highly optimized streaming **Speech-to-Text (STT)** and tokenization. As the user speaks, audio is transcribed into text tokens and fed continuously into the LLM context window, maintaining strict semantic coherence.
+* **Large Language Models & Transformers**: Driven by **Claude 3.5 (Anthropic)** on AWS Bedrock, an advanced **transformer model**. We heavily utilize **Prompt Engineering** and few-shot classification techniques for precise intent recognition (functioning as dynamic **Named Entity Recognition / NER** and **Text Classification**) directly within the prompt schema.
+* **RAG, Vector Databases & Embeddings**: To prevent hallucinations, we built a **Retrieval-Augmented Generation (RAG)** pipeline. We generate **embeddings** of product catalogs and perform **Semantic Search** using **pgvector** in PostgreSQL (acting as our **Vector Database**) to retrieve context before generating a response.
+* **Machine Learning Fundamentals (VAD)**: Utilizes **Silero VAD**, a **PyTorch**-based machine learning model, running locally at 16kHz to perform Voice Activity Detection. This handles complex **Data Structures & Algorithms** (like ring buffers and event queues) to detect barge-ins and end-of-utterance with millisecond precision.
+* **MLOps, CI/CD & Telemetry**: The entire backend is containerized via **Docker** and deployed on AWS ECS (utilizing core **Kubernetes** concepts). For **ML experiment tracking** and observability, we built a custom telemetry emitter that pushes inference times and stage latencies directly to Redis.
+* **Database & APIs**: The full-stack Remix application exposes secure **REST APIs**, utilizing Prisma ORM for **SQL** relational queries alongside vector searches.
+
+---
+
 ## 🗺️ 100% Accurate Architecture Diagram
 
 ```mermaid
