@@ -1,6 +1,6 @@
-# 🎙️ Enterprise Voice AI Assistant – Real-Time Conversational Commerce
+# 🎙️ Shopkeeper AI – Enterprise Voice Commerce Agent
 
-> **A drop-in, highly scalable AI Voice Agent that integrates into any website or e-commerce platform via a lightweight widget. Built with WebRTC, Pipecat, LiveKit, and a Vector-driven RAG architecture to deliver sub-second conversational commerce.**
+> **A drop-in, highly scalable AI Voice Agent that integrates into any website or e-commerce platform via a lightweight widget. Built with WebRTC (LiveKit), Pipecat, AWS Bedrock, and a pgvector RAG architecture to deliver sub-second conversational commerce.**
 
 🔗 **Live Website Integration:** [atlowest.com](https://atlowest.com)  
 🛍️ **Shopify App Store:** [Shopkeeper Voice Agent](https://apps.shopify.com/shopkeeper-2)
@@ -9,55 +9,61 @@
 
 ## 📸 The Plug-and-Play Widget
 
-Embedding the voice agent is as simple as adding a single script tag to any website. Once launched, it establishes a persistent WebRTC connection, allowing users to talk directly to the AI—just like a human support agent—to find products, get recommendations, and check order statuses.
+Embedding the voice agent is as simple as adding a single script tag to any website. Once launched, it establishes a persistent WebRTC connection to our LiveKit backend, allowing users to talk directly to the AI—just like a human support agent.
 
 *(Screenshot placeholder: Please upload your screenshot to the `assets` folder as `widget-demo.png` and add the markdown `![Voice Widget Action](assets/widget-demo.png)` here!)*
 
 ---
 
-## 🏗️ Deep Dive: System Architecture & Integration
+## 🏗️ Deep Dive: Exact System Architecture & Integration
 
-This project is engineered to solve the hardest problems in real-time Voice AI: **Latency, Interruption Handling, and Contextual Accuracy.** 
+This architecture reflects the 100% accurate, production-grade deployment of the system spanning multiple repositories, languages, and specialized AI infrastructure.
 
-### 1. WebRTC & LiveKit Infrastructure
-To achieve ultra-low latency, standard HTTP requests are insufficient. We utilize **LiveKit** as our WebRTC media server. 
-* **Client-Side**: The Vanilla JS widget captures raw microphone audio and streams it continuously over a WebRTC peer connection.
-* **Server-Side**: The audio stream is ingested by our **Pipecat** (Python) worker, which orchestrates the entire AI pipeline in real-time.
+### 1. Client-Side: React Voice Widget (Vite + LiveKit)
+Unlike typical chat widgets, our client is built for real-time bidirectional audio.
+* **Tech Stack**: React 18, Framer Motion (for fluid, native-feeling UI animations), TailwindCSS, and `@livekit/components-react`.
+* **Bundling**: The entire React widget is bundled via Vite and Esbuild into a single, highly optimized script file that can be injected into any Shopify theme or external website without causing CSS conflicts or massive payload drops.
+* **Audio Transport**: It uses the LiveKit Client SDK to establish a peer-to-peer WebRTC connection to our backend media server.
 
-### 2. Voice Activity Detection (VAD) & Audio Processing
-Before sending audio to transcription, we run a local **Voice Activity Detection (VAD)** model (e.g., Silero VAD) within the Pipecat pipeline.
-* **Endpointing**: The VAD intelligently detects when a user starts and stops speaking. 
-* **Interruption (Barge-in)**: If the AI is speaking and the user interrupts, the VAD detects the human voice, instantly halts the TTS playback, and flushes the audio buffers, creating a natural, conversational dynamic.
+### 2. Backend API & Merchant Dashboard (Remix + Node.js)
+The core web backend is a full-stack Remix application serving both the Shopify Admin interface and secure API endpoints.
+* **Widget Tokenization**: Generates secure JWTs for LiveKit (`api.widget-token.tsx`), ensuring only authorized storefronts can spin up expensive voice sessions.
+* **Data Persistence**: Uses **Prisma ORM** to connect to our primary **PostgreSQL** database.
+* **Background Jobs**: Automated crons (`api.cron.*`) handle session pruning, ticket expiry, and voice analytics aggregation.
 
-### 3. Speech-to-Text (STT) & Tokenization
-Once human speech is detected, the audio frames are streamed to the STT engine.
-* Transcribed text is immediately tokenized and appended to the conversational state machine. 
-* We optimize tokenization to ensure the LLM's context window contains the most relevant recent dialogue, maintaining fast inference times while preserving context.
+### 3. The Brain: Real-time Voice Pipeline (Python / Pipecat)
+The actual voice AI is orchestrated by a Python-based state machine using the **Pipecat** framework, deployed on AWS ECS. It uses a custom-built, highly concurrent pipeline:
+* **Transport**: `LiveKitTransport` ingests the raw WebRTC audio frames directly from the user's browser.
+* **VAD (Layer 1)**: `SileroVADAnalyzer` (running locally at 16kHz) acts as the gatekeeper. It performs Voice Activity Detection to intelligently chunk human speech and instantly detect barge-ins (interruptions).
+* **STT**: `DeepgramSTTService` handles lightning-fast streaming Speech-to-Text transcription.
+* **LLM**: A heavily customized `BedrockLLMService` interfaces with Anthropic's Claude models on AWS Bedrock, maintaining conversational memory and streaming token generation.
+* **TTS Router**: A `DynamicMultilingualTTSService` routes generated text dynamically to either **AWS Polly** or **Deepgram TTS** depending on language and latency requirements, streaming audio back to LiveKit before the sentence is even finished.
 
-### 4. Vector Database & RAG (Retrieval-Augmented Generation)
-To ensure the AI doesn't hallucinate and knows the merchant's exact inventory, we use a sophisticated RAG pipeline:
-* **Embeddings**: Product catalogs, store policies, and FAQs are embedded into vector representations.
-* **pgvector (PostgreSQL)**: We use PostgreSQL with the `pgvector` extension for lightning-fast similarity search (Cosine Similarity/HNSW). 
-* **Context Injection**: Before querying the LLM, the user's intent is vectorized, relevant product data is fetched from the database, and injected directly into the LLM's system prompt dynamically.
+### 4. RAG & Vector Database (PostgreSQL + pgvector)
+To ensure the AI doesn't hallucinate and knows the merchant's exact inventory and store policies, we use a Vector-driven RAG architecture.
+* **Embeddings**: Store data is embedded and stored directly in Postgres using the **`pgvector`** extension (`embedding Unsupported("vector")?` in Prisma).
+* **Context Injection**: During the LLM phase, user intent is vectorized and matched against the `pgvector` store using Cosine Similarity, dynamically injecting relevant data into the Bedrock prompt schema.
 
-### 5. Large Language Model (Claude 3.5 / AWS Bedrock)
-The conversational brain is powered by Claude 3.5 via AWS Bedrock.
-* **Streaming Generation**: The LLM streams its response token-by-token. We do not wait for the full sentence to finish.
-* **Tool Calling**: The LLM is equipped with function-calling capabilities to trigger backend actions (e.g., `check_inventory(sku)`, `add_to_cart(id)`).
-
-### 6. Streaming Text-to-Speech (TTS)
-As soon as the LLM generates the first few tokens (a phrase or sentence), it is immediately sent to the TTS engine. The synthesized audio is chunked and sent back through the LiveKit WebRTC channel, playing in the user's browser before the LLM has even finished generating the complete thought.
+### 5. Neural Network Telemetry (Upstash Redis)
+We built a custom, zero-AWS-cost telemetry emitter (`nn_telemetry.py`) inside the Pipecat agent. 
+* Every key pipeline stage (VAD trigger, LLM Thinking, TTS generation, tool execution) emits a lightweight event to **Upstash Redis**.
+* The Remix Merchant Dashboard subscribes to these Redis events via Server-Sent Events (SSE), rendering a live, stunning "Neural Network" visualization of every active voice session in real-time.
 
 ---
 
-## 🗺️ Comprehensive Architecture Diagram
+## 🗺️ 100% Accurate Architecture Diagram
 
 ```mermaid
 graph TD
     %% Client Layer
-    subgraph Client ["Client Applications (Any Website)"]
-        VW["Drop-in Voice Widget (Vanilla JS / WebRTC)"]
-        MD["Merchant Admin Panel (React / Remix)"]
+    subgraph Client ["Client Interface (Shopper Storefront)"]
+        VW["Voice Widget<br/>(React 18, Framer Motion, Tailwind)"]
+    end
+
+    %% Remix Backend Layer
+    subgraph Dashboard ["Merchant Backend (Remix + Node.js)"]
+        ADMIN["Shopify Admin Panel (Polaris UI)"]
+        API["API Routes (Token Auth, Crons)"]
     end
 
     %% WebRTC Media Layer
@@ -66,93 +72,91 @@ graph TD
     end
 
     %% Real-time Voice Pipeline (Pipecat)
-    subgraph Pipeline ["Real-time Voice Pipeline (Python / Pipecat / ECS)"]
-        VAD["Voice Activity Detection (Silero VAD)"]
-        STT["Streaming Speech-to-Text"]
-        AGENT["Pipecat State Machine & Dialogue Manager"]
-        LLM["Large Language Model (AWS Bedrock)"]
-        TTS["Streaming Text-to-Speech"]
+    subgraph Pipeline ["Voice Pipeline (Python Pipecat on AWS ECS)"]
+        TRANSPORT["LiveKitTransport"]
+        VAD["Silero VAD (16kHz Local Endpointing)"]
+        STT["Deepgram STT Service"]
+        LLM["Bedrock LLM Service (Claude)"]
+        TTS["Dynamic TTS Router (AWS Polly / Deepgram)"]
     end
 
-    %% RAG & Database Layer
-    subgraph DataLayer ["Data & Vector Layer"]
-        PG[("PostgreSQL (Primary DB)")]
-        VDB[("pgvector (RAG / Embeddings)")]
-        REDIS[("Upstash Redis (Telemetry)")]
+    %% Data & State Layer
+    subgraph DataLayer ["Persistence & State"]
+        PG[("PostgreSQL (Prisma ORM)")]
+        VDB[("pgvector (RAG Embeddings)")]
+        REDIS[("Upstash Redis (Session Telemetry)")]
     end
 
-    %% Connections - Client to Gateway
-    VW <-->|"Bi-directional Audio RTP"| LK
-    MD <-->|"Live Dashboard SSE"| REDIS
-
-    %% LiveKit to Pipeline
-    LK <-->|"Raw Audio Frames"| VAD
-    VAD -->|"Human Speech Chunk"| STT
-    STT -->|"Transcribed Text"| AGENT
+    %% Flow - Widget to Media
+    VW <-->|"LiveKit JWT Auth"| API
+    VW <-->|"WebRTC RTP Audio"| LK
     
-    %% AI & Data Routing
-    AGENT <-->|"Similarity Search"| VDB
-    AGENT <-->|"Context + Conversation"| LLM
-    LLM -->|"Token Stream"| TTS
-    TTS -->|"Synthesized Audio"| LK
+    %% Media to Pipeline
+    LK <-->|"Raw Audio Frames"| TRANSPORT
+    TRANSPORT --> VAD
+    VAD -->|"Speech Start/Stop"| STT
+    STT -->|"Transcript Stream"| LLM
+    LLM <-->|"Vector Search"| VDB
+    LLM -->|"Response Tokens"| TTS
+    TTS -->|"Synthesized Audio"| TRANSPORT
 
-    %% State & Persistence
-    AGENT -.->|"Session State Updates"| REDIS
-    MD <-->|"CRUD & Training Data"| PG
+    %% Dashboard and DB Connections
+    ADMIN <-->|"CRUD & Settings"| API
+    API <-->|"Queries"| PG
+    API <-->|"Vectorize Store Data"| VDB
+
+    %% Real-time Telemetry
+    Pipeline -.->|"Stage Events (nn_telemetry)"| REDIS
+    REDIS -.->|"SSE Stream"| ADMIN
 ```
-
----
-
-## 🚀 Key Differentiators
-
-* **Universal Integration**: Not just for Shopify. The widget is a pure JavaScript snippet that can be injected into **any website**, transforming a static site into a conversational experience instantly.
-* **Sub-Second Latency**: By utilizing Pipecat, LiveKit, and streaming APIs at every step (STT -> LLM -> TTS), the perceived latency is nearly identical to speaking with a human.
-* **Cost-Efficient Telemetry**: Instead of expensive polling, the system uses Upstash Redis to push live neural-network-style visualizations of active sessions directly to the merchant dashboard in real-time.
 
 ---
 
 ## 💻 Code Sample
 
-> *Note: The complete source code is available for review upon request during the interview process. Below is an abstracted representation of our Pipecat + LiveKit integration pattern.*
+> *Note: The complete source code is available for review upon request during the interview process, or I can walk through specific architectural decisions in a live screen-share.*
 
 ```python
-# architecture_sample.py
+# Abstracted representation of our Pipecat Pipeline (agent.py)
 import asyncio
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.task import PipelineTask
-from pipecat.services.livekit import LiveKitTransport
-from pipecat.services.bedrock import BedrockLLMService
-from pipecat.services.elevenlabs import ElevenLabsTTSService
-from pipecat.services.deepgram import DeepgramSTTService
+from pipecat.transports.livekit.transport import LiveKitTransport
+from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.services.deepgram.stt import DeepgramSTTService
+
+from llm_bedrock import BedrockLLMService
+from tts_router import get_tts_service
+import nn_telemetry as telemetry
 
 async def main():
-    # 1. Initialize LiveKit WebRTC Transport
-    transport = LiveKitTransport(
-        room_name="voice-session-123",
-        token="<jwt-token>"
-    )
+    # 1. Initialize WebRTC Transport
+    transport = LiveKitTransport(room_name="session-uuid", token="<jwt>")
     
-    # 2. Initialize Core AI Services
-    stt = DeepgramSTTService()
-    llm = BedrockLLMService(model="anthropic.claude-3-5-sonnet")
-    tts = ElevenLabsTTSService()
+    # 2. Initialize VAD (Silero at 16kHz)
+    vad_analyzer = SileroVADAnalyzer(sample_rate=16000)
     
-    # 3. Construct the Real-Time RAG + Voice Pipeline
-    # Audio IN -> VAD -> STT -> RAG Agent -> LLM -> TTS -> Audio OUT
+    # 3. Initialize AI Services
+    stt = DeepgramSTTService(settings=DeepgramSTTService.Settings(audio_in_sample_rate=16000))
+    llm = BedrockLLMService()
+    tts = get_tts_service(lang_code="en-US", voice_speaker="ritu")
+    
+    # 4. Construct Pipecat Pipeline
     pipeline = Pipeline([
-        transport.input(),    # Captures WebRTC Audio
-        stt,                  # Transcribes to Text
-        # [Custom RAG Context Injector Node Here]
-        llm,                  # Generates Response Tokens
-        tts,                  # Synthesizes Audio
-        transport.output()    # Streams back over WebRTC
+        transport.input(),    # WebRTC Audio In
+        vad_analyzer,         # Endpointing & Barge-in detection
+        stt,                  # Deepgram STT
+        llm,                  # Claude / AWS Bedrock (with RAG injection)
+        tts,                  # Dynamic TTS (Polly/Deepgram)
+        transport.output()    # WebRTC Audio Out
     ])
     
     task = PipelineTask(pipeline)
     
     @transport.event_handler("on_participant_connected")
     async def on_connected(participant):
-        print(f"User {participant.identity} joined. Ready to talk.")
+        telemetry.session_started("session-uuid")
+        print(f"Shopper connected via LiveKit.")
         
     await task.run()
 
